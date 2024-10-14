@@ -1,0 +1,7 @@
+torch>=2.0
+torchvision>=2.0
+smplx==0.1.28
+timm
+einops
+ultralytics==8.1.34
+opencv-python
