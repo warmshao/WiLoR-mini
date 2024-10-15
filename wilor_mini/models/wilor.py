@@ -18,11 +18,11 @@ class WiLor(nn.Module):
         self.backbone = vit()
         # Create RefineNet head
         self.refine_net = RefineNet(feat_dim=1280, upscale=3)
-        mano_model_path = kwargs.get("mano_model_path", )
-        assert os.path.exists(mano_model_path), f"{mano_model_path} not exists!"
+        mano_model_path = kwargs.get("mano_model_path", "")
+        assert os.path.exists(mano_model_path), f"MANO model {mano_model_path} not exists!"
         mano_cfg = {
             "model_path": mano_model_path,
-            "create_hand_pose": False
+            "create_body_pose": False
         }
         self.mano = MANO(**mano_cfg)
         self.FOCAL_LENGTH = kwargs.get("focal_length", 5000)
@@ -35,21 +35,16 @@ class WiLor(nn.Module):
         temp_mano_params, pred_cam, pred_mano_feats, vit_out = self.backbone(x[:, :, :, 32:-32])  # B, 1280, 16, 12
 
         # Compute camera translation
-        device = temp_mano_params['hand_pose'].device
-        dtype = temp_mano_params['hand_pose'].dtype
-        focal_length = self.FOCAL_LENGTH * torch.ones(batch_size, 2, device=device, dtype=dtype)
+        focal_length = self.FOCAL_LENGTH * torch.ones(batch_size, 2, device=x.device, dtype=x.dtype)
 
         ## Temp MANO
         temp_mano_params['global_orient'] = temp_mano_params['global_orient'].reshape(batch_size, -1, 3, 3)
         temp_mano_params['hand_pose'] = temp_mano_params['hand_pose'].reshape(batch_size, -1, 3, 3)
         temp_mano_params['betas'] = temp_mano_params['betas'].reshape(batch_size, -1)
         temp_mano_output = self.mano(**{k: v.float() for k, v in temp_mano_params.items()}, pose2rot=False)
-        # temp_keypoints_3d = temp_mano_output.joints
         temp_vertices = temp_mano_output.vertices
 
         pred_hand_pose, pred_betas, pred_cam = self.refine_net(vit_out, temp_vertices, pred_cam, pred_mano_feats,
                                                                focal_length)
-        pred_cam_t = torch.stack([pred_cam[:, 1],
-                                  pred_cam[:, 2],
-                                  2 * focal_length[:, 0] / (self.IMAGE_SIZE * pred_cam[:, 0] + 1e-9)], dim=-1)
-        return pred_hand_pose, pred_betas, pred_cam_t
+
+        return pred_hand_pose, pred_betas, pred_cam

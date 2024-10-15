@@ -1,7 +1,9 @@
 torch>=2.0
-torchvision>=2.0
+torchvision>=0.15.1
 smplx==0.1.28
 timm
 einops
 ultralytics==8.1.34
 opencv-python
+huggingface_hub
+git+https://github.com/mattloper/chumpy
