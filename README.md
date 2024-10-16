@@ -21,7 +21,7 @@ image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 outputs = pipe.predict(image)
 
 ```
-For more usage examples, please refer to: tests/test_pipelines.py
+For more usage examples, please refer to: `tests/test_pipelines.py`
 
 ### Demo
-<video src="https://github.com/user-attachments/assets/ca7329fe-0b66-4eb6-87a5-4cb5cbe9ec43" controls="controls" width="400" height="500">您的浏览器不支持播放该视频！</video>
+<video src="https://github.com/user-attachments/assets/ca7329fe-0b66-4eb6-87a5-4cb5cbe9ec43" controls="controls" width="300" height="500">您的浏览器不支持播放该视频！</video>
