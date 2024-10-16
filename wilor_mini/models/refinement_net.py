@@ -4,6 +4,8 @@ import torch.nn.functional as F
 import math
 from typing import Optional
 
+from .vit import rot6d_to_rotmat
+
 
 def make_linear_layers(feat_dims, relu_final=True, use_bn=False):
     layers = []
@@ -197,4 +199,11 @@ class RefineNet(nn.Module):
         pred_betas = pred_mano_feats['betas'] + delta_betas
         pred_cam = pred_mano_feats['cam'] + delta_cam
 
-        return pred_hand_pose, pred_betas, pred_cam
+        pred_hand_pose = rot6d_to_rotmat(pred_hand_pose).view(B, -1, 3, 3)
+
+        pred_mano_params = {'global_orient': pred_hand_pose[:, [0]],
+                            'hand_pose': pred_hand_pose[:, 1:],
+                            'betas': pred_betas,
+                            'pred_cam': pred_cam}
+
+        return pred_mano_params

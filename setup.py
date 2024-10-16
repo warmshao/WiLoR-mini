@@ -17,7 +17,8 @@ setup(
     packages=[
         'wilor_mini',
         'wilor_mini.models',
-        'wilor_mini.pipelines'
+        'wilor_mini.pipelines',
+        'wilor_mini.utils'
     ],
     install_requires=requirements,
     python_requires='>=3.8',
