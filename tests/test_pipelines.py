@@ -6,6 +6,8 @@
 
 """
 you need to install trimesh and pyrender if you want to render mesh
+pip install trimesh
+pip install pyrender
 """
 
 import os
@@ -213,7 +215,8 @@ class Renderer:
             camera_translation[0] *= -1.
         else:
             camera_translation = np.array([0, 0, camera_z * focal_length / render_res[1]])
-
+        if is_right:
+            mesh_base_color = mesh_base_color[::-1]
         mesh = self.vertices_to_trimesh(vertices, np.array([0, 0, 0]), mesh_base_color, rot_axis, rot_angle,
                                         is_right=is_right)
         mesh = pyrender.Mesh.from_trimesh(mesh)
@@ -283,7 +286,7 @@ class Renderer:
             scene.add_node(node)
 
 
-def test_wilor_pipeline():
+def test_wilor_image_pipeline():
     import cv2
     import torch
     import numpy as np
@@ -330,9 +333,93 @@ def test_wilor_pipeline():
 
         # Overlay image
         render_image = render_image[:, :, :3] * (1 - cam_view[:, :, 3:]) + cam_view[:, :, :3] * cam_view[:, :, 3:]
-    render_image = (255 * render_image[:, :, ::-1]).astype(np.uint8)
+    render_image = (255 * render_image).astype(np.uint8)
     cv2.imwrite(os.path.join(save_dir, os.path.basename(img_path)), render_image)
 
 
+def test_wilor_video_pipeline():
+    import cv2
+    import torch
+    import numpy as np
+    import os
+    from wilor_mini.pipelines.wilor_hand_pose3d_estimation_pipeline import WiLorHandPose3dEstimationPipeline
+
+    LIGHT_PURPLE = (0.25098039, 0.274117647, 0.65882353)
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    dtype = torch.float16
+
+    pipe = WiLorHandPose3dEstimationPipeline(device=device, dtype=dtype)
+    video_path = "assets/video.mp4"
+    save_dir = "./results"
+    os.makedirs(save_dir, exist_ok=True)
+    renderer = Renderer(pipe.wilor_model.mano.faces)
+
+    # Open the video file
+    cap = cv2.VideoCapture(video_path)
+
+    # Get video properties
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    # Create VideoWriter object
+    output_path = os.path.join(save_dir, os.path.basename(video_path))
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    vout = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+    frame_count = 0
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Convert frame to RGB
+        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        outputs = pipe.predict(image)
+
+        render_image = image.copy()
+        render_image = render_image.astype(np.float32)[:, :, ::-1] / 255.0
+
+        for i, out in enumerate(outputs):
+            verts = out["wilor_preds"]['pred_vertices'][0]
+            joints = out["wilor_preds"]['pred_keypoints_3d'][0]
+            is_right = out['is_right']
+
+            verts[:, 0] = (2 * is_right - 1) * verts[:, 0]
+            joints[:, 0] = (2 * is_right - 1) * joints[:, 0]
+            cam_t = out["wilor_preds"]['pred_cam_t_full'][0]
+            scaled_focal_length = out["wilor_preds"]['scaled_focal_length']
+
+            misc_args = dict(
+                mesh_base_color=LIGHT_PURPLE,
+                scene_bg_color=(1, 1, 1),
+                focal_length=scaled_focal_length,
+            )
+            # tmesh = renderer.vertices_to_trimesh(verts, cam_t.copy(), LIGHT_PURPLE, is_right=is_right)
+            cam_view = renderer.render_rgba(verts, cam_t=cam_t, render_res=[image.shape[1], image.shape[0]],
+                                            is_right=is_right,
+                                            **misc_args)
+
+            # Overlay image
+            render_image = render_image[:, :, :3] * (1 - cam_view[:, :, 3:]) + cam_view[:, :, :3] * cam_view[:, :, 3:]
+
+        render_image = (255 * render_image).astype(np.uint8)
+
+        # Write the frame to the output video
+        vout.write(render_image)
+
+        frame_count += 1
+        print(f"Processed frame {frame_count}")
+
+    # Release everything
+    cap.release()
+    vout.release()
+    cv2.destroyAllWindows()
+
+    print(f"Video processing complete. Output saved to {output_path}")
+
+
 if __name__ == '__main__':
-    test_wilor_pipeline()
+    # test_wilor_image_pipeline()
+    test_wilor_video_pipeline()
