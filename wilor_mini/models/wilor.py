@@ -16,7 +16,7 @@ class WiLor(nn.Module):
     def __init__(self, **kwargs):
         super(WiLor, self).__init__()
         # Create VIT backbone
-        self.backbone = vit()
+        self.backbone = vit(**kwargs)
         # Create RefineNet head
         self.refine_net = RefineNet(feat_dim=1280, upscale=3)
         mano_model_path = kwargs.get("mano_model_path", "")

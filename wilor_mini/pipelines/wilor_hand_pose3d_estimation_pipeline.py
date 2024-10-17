@@ -32,6 +32,11 @@ class WiLorHandPose3dEstimationPipeline:
         wilor_pretrained_dir = kwargs.get("wilor_pretrained_dir",
                                           os.path.join(os.path.dirname(__file__), ".."))
         os.makedirs(wilor_pretrained_dir, exist_ok=True)
+        mano_mean_path = os.path.join(wilor_pretrained_dir, "pretrained_models", "mano_mean_params.npz")
+        if not os.path.exists(mano_mean_path):
+            self.logger.info(f"download mano mean npz {mano_mean_path} from huggingface")
+            hf_hub_download(repo_id=self.WILOR_MINI_REPO_ID, subfolder="pretrained_models", filename="mano_mean_params.npz",
+                            local_dir=wilor_pretrained_dir)
         mano_model_path = os.path.join(wilor_pretrained_dir, "pretrained_models", "MANO_RIGHT.pkl")
         if not os.path.exists(mano_model_path):
             self.logger.info(f"download mano model {mano_model_path} from huggingface")

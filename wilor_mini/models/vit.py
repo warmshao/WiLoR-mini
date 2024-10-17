@@ -28,7 +28,7 @@ def rot6d_to_rotmat(x: torch.Tensor) -> torch.Tensor:
     return torch.stack((b1, b2, b3), dim=-1)
 
 
-def vit():
+def vit(**kwargs):
     return ViT(
         img_size=(256, 192),
         patch_size=16,
@@ -39,7 +39,8 @@ def vit():
         use_checkpoint=False,
         mlp_ratio=4,
         qkv_bias=True,
-        drop_path_rate=0.55
+        drop_path_rate=0.55,
+        **kwargs
     )
 
 
@@ -271,8 +272,8 @@ class ViT(nn.Module):
         self.NUM_HAND_JOINTS = 15
         npose = self.joint_rep_dim * (self.NUM_HAND_JOINTS + 1)
         self.npose = npose
-        mano_mean_path = os.path.join(os.path.abspath(os.path.abspath(os.path.dirname(__file__))),
-                                      "mano_mean_params.npz")
+        mano_mean_path = kwargs.get("mano_mean_path", None)
+        assert mano_mean_path and os.path.exists(mano_mean_path), "{} not exists!"
         mean_params = np.load(mano_mean_path)
         init_cam = torch.from_numpy(mean_params['cam'].astype(np.float32)).unsqueeze(0)
         self.register_buffer('init_cam', init_cam)
