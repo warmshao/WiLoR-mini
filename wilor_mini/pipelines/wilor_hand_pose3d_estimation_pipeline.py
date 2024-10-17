@@ -12,6 +12,7 @@ from huggingface_hub import hf_hub_download
 import os
 import numpy as np
 from tqdm import tqdm
+import logging
 
 from ..utils.logger import get_logger
 from ..models.wilor import WiLor
@@ -20,7 +21,11 @@ from ..utils import utils
 
 class WiLorHandPose3dEstimationPipeline:
     def __init__(self, **kwargs):
-        self.logger = get_logger(self.__class__.__name__)
+        self.verbose = kwargs.get("verbose", True)
+        if self.verbose:
+            self.logger = get_logger(self.__class__.__name__, lv=logging.INFO)
+        else:
+            self.logger = get_logger(self.__class__.__name__, lv=logging.ERROR)
         self.init_models(**kwargs)
 
     def init_models(self, **kwargs):
@@ -70,7 +75,7 @@ class WiLorHandPose3dEstimationPipeline:
     @torch.no_grad()
     def predict(self, image, **kwargs):
         self.logger.info("start hand detection >>> ")
-        detections = self.hand_detector(image, conf=kwargs.get("hand_conf", 0.3), verbose=False)[0]
+        detections = self.hand_detector(image, conf=kwargs.get("hand_conf", 0.3), verbose=self.verbose)[0]
         detect_rets = []
         bboxes = []
         is_rights = []
@@ -91,7 +96,7 @@ class WiLorHandPose3dEstimationPipeline:
         scale = rescale_factor * (bboxes[:, 2:4] - bboxes[:, 0:2])
         self.logger.info(f"detect {bboxes.shape[0]} hands")
         self.logger.info("start hand 3d pose estimation >>> ")
-        for i in tqdm(range(bboxes.shape[0])):
+        for i in tqdm(range(bboxes.shape[0]), disable=not self.verbose):
             bbox_size = scale[i].max()
             patch_width = patch_height = self.IMAGE_SIZE
             right = is_rights[i]
