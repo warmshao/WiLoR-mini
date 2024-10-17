@@ -35,7 +35,8 @@ class WiLorHandPose3dEstimationPipeline:
         mano_mean_path = os.path.join(wilor_pretrained_dir, "pretrained_models", "mano_mean_params.npz")
         if not os.path.exists(mano_mean_path):
             self.logger.info(f"download mano mean npz {mano_mean_path} from huggingface")
-            hf_hub_download(repo_id=self.WILOR_MINI_REPO_ID, subfolder="pretrained_models", filename="mano_mean_params.npz",
+            hf_hub_download(repo_id=self.WILOR_MINI_REPO_ID, subfolder="pretrained_models",
+                            filename="mano_mean_params.npz",
                             local_dir=wilor_pretrained_dir)
         mano_model_path = os.path.join(wilor_pretrained_dir, "pretrained_models", "MANO_RIGHT.pkl")
         if not os.path.exists(mano_model_path):
@@ -43,7 +44,8 @@ class WiLorHandPose3dEstimationPipeline:
             hf_hub_download(repo_id=self.WILOR_MINI_REPO_ID, subfolder="pretrained_models", filename="MANO_RIGHT.pkl",
                             local_dir=wilor_pretrained_dir)
         self.logger.info(f"loading WiLor model >>> ")
-        self.wilor_model = WiLor(mano_model_path=mano_model_path, focal_length=self.FOCAL_LENGTH,
+        self.wilor_model = WiLor(mano_model_path=mano_model_path, mano_mean_path=mano_mean_path,
+                                 focal_length=self.FOCAL_LENGTH,
                                  image_size=self.IMAGE_SIZE)
         wilor_model_path = os.path.join(wilor_pretrained_dir, "pretrained_models", "wilor_final.ckpt")
         if not os.path.exists(wilor_model_path):
