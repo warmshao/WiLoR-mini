@@ -17,3 +17,5 @@ demo/
 data/SHAPY/mesh-mesh-intersection/build/
 data/SHAPY/mesh-mesh-intersection/mesh_mesh_intersect_cuda.cpython-38-x86_64-linux-gnu.so
 results
+build
+dist
