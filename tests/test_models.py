@@ -116,5 +116,5 @@ def test_wilor_profiler():
 
 if __name__ == '__main__':
     # test_wilor_model()
-    # test_vit_profiler()
-    test_wilor_profiler()
+    test_vit_profiler()
+    # test_wilor_profiler()

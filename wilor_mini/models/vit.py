@@ -136,15 +136,12 @@ class Attention(nn.Module):
         B, N, C = x.shape
         qkv = self.qkv(x)
         qkv = qkv.reshape(B, N, 3, self.num_heads, -1).permute(2, 0, 3, 1, 4)
-        q, k, v = qkv[0], qkv[1], qkv[2]  # make torchscript happy (cannot use tensor as tuple)
+        q, k, v = qkv[0], qkv[1], qkv[2]
 
-        q = q * self.scale
-        attn = (q @ k.transpose(-2, -1))
+        # 使用 scaled_dot_product_attention
+        attn = F.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=0.0)
 
-        attn = attn.softmax(dim=-1)
-        attn = self.attn_drop(attn)
-
-        x = (attn @ v).transpose(1, 2).reshape(B, N, -1)
+        x = attn.transpose(1, 2).reshape(B, N, -1)
         x = self.proj(x)
         x = self.proj_drop(x)
 
@@ -327,10 +324,7 @@ class ViT(nn.Module):
 
         x = torch.cat([pose_tokens, shape_tokens, cam_tokens, x], 1)
         for blk in self.blocks:
-            if self.use_checkpoint:
-                x = checkpoint.checkpoint(blk, x)
-            else:
-                x = blk(x)
+            x = blk(x)
 
         x = self.last_norm(x)
 

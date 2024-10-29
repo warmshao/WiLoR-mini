@@ -303,8 +303,10 @@ def test_wilor_image_pipeline():
     img_path = "assets/img.png"
     image = cv2.imread(img_path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-    outputs = pipe.predict(image)
+    for _ in range(20):
+        t0 = time.time()
+        outputs = pipe.predict(image)
+        print(time.time() - t0)
     save_dir = "./results"
     os.makedirs(save_dir, exist_ok=True)
     renderer = Renderer(pipe.wilor_model.mano.faces)
