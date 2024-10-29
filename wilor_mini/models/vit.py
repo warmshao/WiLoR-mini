@@ -273,7 +273,7 @@ class ViT(nn.Module):
         npose = self.joint_rep_dim * (self.NUM_HAND_JOINTS + 1)
         self.npose = npose
         mano_mean_path = kwargs.get("mano_mean_path", None)
-        assert mano_mean_path and os.path.exists(mano_mean_path), "{} not exists!"
+        assert mano_mean_path and os.path.exists(mano_mean_path), f"{mano_mean_path} not exists!"
         mean_params = np.load(mano_mean_path)
         init_cam = torch.from_numpy(mean_params['cam'].astype(np.float32)).unsqueeze(0)
         self.register_buffer('init_cam', init_cam)

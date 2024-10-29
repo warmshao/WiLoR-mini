@@ -58,7 +58,8 @@ class WiLorHandPose3dEstimationPipeline:
             hf_hub_download(repo_id=self.WILOR_MINI_REPO_ID, subfolder="pretrained_models", filename="wilor_final.ckpt",
                             local_dir=wilor_pretrained_dir)
         self.wilor_model.load_state_dict(torch.load(wilor_model_path)["state_dict"], strict=False)
-        self.wilor_model.eval().to(self.device, dtype=self.dtype)
+        self.wilor_model.eval()
+        self.wilor_model.to(self.device, dtype=self.dtype)
 
         yolo_model_path = os.path.join(wilor_pretrained_dir, "pretrained_models", "detector.pt")
         if not os.path.exists(yolo_model_path):
@@ -68,9 +69,6 @@ class WiLorHandPose3dEstimationPipeline:
         self.logger.info(f"loading Yolo hand detection model >>> ")
         self.hand_detector = YOLO(yolo_model_path)
         self.hand_detector.to(self.device)
-
-        self.IMAGE_MEAN = np.array([0.485, 0.456, 0.406]).reshape(1, 1, 3)
-        self.IMAGE_STD = np.array([0.229, 0.224, 0.225]).reshape(1, 1, 3)
 
     @torch.no_grad()
     def predict(self, image, **kwargs):
@@ -96,6 +94,8 @@ class WiLorHandPose3dEstimationPipeline:
         scale = rescale_factor * (bboxes[:, 2:4] - bboxes[:, 0:2])
         self.logger.info(f"detect {bboxes.shape[0]} hands")
         self.logger.info("start hand 3d pose estimation >>> ")
+        img_patches = []
+        img_size = np.array([image.shape[1], image.shape[0]])
         for i in tqdm(range(bboxes.shape[0]), disable=not self.verbose):
             bbox_size = scale[i].max()
             patch_width = patch_height = self.IMAGE_SIZE
@@ -109,7 +109,6 @@ class WiLorHandPose3dEstimationPipeline:
             downsampling_factor = downsampling_factor / 2.0
             if downsampling_factor > 1.1:
                 cvimg = gaussian(cvimg, sigma=(downsampling_factor - 1) / 2, channel_axis=2, preserve_range=True)
-            img_size = np.array([cvimg.shape[1], cvimg.shape[0]])
 
             img_patch_cv, trans = utils.generate_image_patch_cv2(cvimg,
                                                                  box_center[0], box_center[1],
@@ -117,22 +116,26 @@ class WiLorHandPose3dEstimationPipeline:
                                                                  patch_width, patch_height,
                                                                  flip, 1.0, 0,
                                                                  border_mode=cv2.BORDER_CONSTANT)
-            img_patch_cv = img_patch_cv[:, :, ::-1]
-            img_patch = img_patch_cv / 255.
-            img_patch = (img_patch - self.IMAGE_MEAN) / self.IMAGE_STD
-            img_patch = np.transpose(img_patch, (2, 0, 1))
-            img_patch = torch.from_numpy(img_patch[None]).to(device=self.device, dtype=self.dtype)
-            wilor_output = self.wilor_model(img_patch)
-            wilor_output = {k: v.cpu().numpy().astype(np.float32) for k, v in wilor_output.items()}
-            pred_cam = wilor_output["pred_cam"]
+            img_patches.append(img_patch_cv)
+        img_patches = np.stack(img_patches)
+        img_patches = torch.from_numpy(img_patches).to(device=self.device, dtype=self.dtype)
+        wilor_output = self.wilor_model(img_patches)
+        wilor_output = {k: v.cpu().float().numpy() for k, v in wilor_output.items()}
+
+        for i in range(len(detect_rets)):
+            wilor_output_i = {key: val[[i]] for key, val in wilor_output.items()}
+            pred_cam = wilor_output_i["pred_cam"]
+            bbox_size = scale[i].max()
+            box_center = center[i]
+            right = is_rights[i]
             multiplier = (2 * right - 1)
             pred_cam[:, 1] = multiplier * pred_cam[:, 1]
             scaled_focal_length = self.FOCAL_LENGTH / self.IMAGE_SIZE * img_size.max()
             pred_cam_t_full = utils.cam_crop_to_full(pred_cam, box_center[None], bbox_size, img_size[None],
                                                      scaled_focal_length)
-            wilor_output["pred_cam_t_full"] = pred_cam_t_full
-            wilor_output["scaled_focal_length"] = scaled_focal_length
-            detect_rets[i]["wilor_preds"] = wilor_output
+            wilor_output_i["pred_cam_t_full"] = pred_cam_t_full
+            wilor_output_i["scaled_focal_length"] = scaled_focal_length
+            detect_rets[i]["wilor_preds"] = wilor_output_i
 
         self.logger.info("finish detection!")
         return detect_rets
@@ -151,6 +154,8 @@ class WiLorHandPose3dEstimationPipeline:
         scale = rescale_factor * (bboxes[:, 2:4] - bboxes[:, 0:2])
         self.logger.info(f"detect {bboxes.shape[0]} hands")
         self.logger.info("start hand 3d pose estimation >>> ")
+        img_patches = []
+        img_size = np.array([image.shape[1], image.shape[0]])
         for i in tqdm(range(bboxes.shape[0]), disable=not self.verbose):
             bbox_size = scale[i].max()
             patch_width = patch_height = self.IMAGE_SIZE
@@ -172,22 +177,27 @@ class WiLorHandPose3dEstimationPipeline:
                                                                  patch_width, patch_height,
                                                                  flip, 1.0, 0,
                                                                  border_mode=cv2.BORDER_CONSTANT)
-            img_patch_cv = img_patch_cv[:, :, ::-1]
-            img_patch = img_patch_cv / 255.
-            img_patch = (img_patch - self.IMAGE_MEAN) / self.IMAGE_STD
-            img_patch = np.transpose(img_patch, (2, 0, 1))
-            img_patch = torch.from_numpy(img_patch[None]).to(device=self.device, dtype=self.dtype)
-            wilor_output = self.wilor_model(img_patch)
-            wilor_output = {k: v.cpu().numpy().astype(np.float32) for k, v in wilor_output.items()}
-            pred_cam = wilor_output["pred_cam"]
+            img_patches.append(img_patch_cv)
+
+        img_patches = np.stack(img_patches)
+        img_patches = torch.from_numpy(img_patches).to(device=self.device, dtype=self.dtype)
+        wilor_output = self.wilor_model(img_patches)
+        wilor_output = {k: v.cpu().float().numpy() for k, v in wilor_output.items()}
+
+        for i in range(len(detect_rets)):
+            wilor_output_i = {key: val[[i]] for key, val in wilor_output.items()}
+            pred_cam = wilor_output_i["pred_cam"]
+            bbox_size = scale[i].max()
+            box_center = center[i]
+            right = is_rights[i]
             multiplier = (2 * right - 1)
             pred_cam[:, 1] = multiplier * pred_cam[:, 1]
             scaled_focal_length = self.FOCAL_LENGTH / self.IMAGE_SIZE * img_size.max()
             pred_cam_t_full = utils.cam_crop_to_full(pred_cam, box_center[None], bbox_size, img_size[None],
                                                      scaled_focal_length)
-            wilor_output["pred_cam_t_full"] = pred_cam_t_full
-            wilor_output["scaled_focal_length"] = scaled_focal_length
-            detect_rets[i]["wilor_preds"] = wilor_output
+            wilor_output_i["pred_cam_t_full"] = pred_cam_t_full
+            wilor_output_i["scaled_focal_length"] = scaled_focal_length
+            detect_rets[i]["wilor_preds"] = wilor_output_i
 
         self.logger.info("finish detection!")
         return detect_rets

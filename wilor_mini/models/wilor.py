@@ -1,6 +1,7 @@
 import os
 import pdb
-
+import time
+import numpy as np
 import torch
 from torch import nn
 from .vit import vit
@@ -28,8 +29,13 @@ class WiLor(nn.Module):
         self.mano = MANO(**mano_cfg)
         self.FOCAL_LENGTH = kwargs.get("focal_length", 5000)
         self.IMAGE_SIZE = kwargs.get("image_size", 256)
+        self.IMAGE_MEAN = torch.from_numpy(np.array([0.485, 0.456, 0.406]).reshape(1, 1, 1, 3))
+        self.IMAGE_STD = torch.from_numpy(np.array([0.229, 0.224, 0.225])).reshape(1, 1, 1, 3)
 
     def forward(self, x):
+        x = x.flip(dims=[-1]) / 255.0
+        x = (x - self.IMAGE_MEAN.to(x.device, dtype=x.dtype)) / self.IMAGE_STD.to(x.device, dtype=x.dtype)
+        x = x.permute(0, 3, 1, 2)
         batch_size = x.shape[0]
         # Compute conditioning features using the backbone
         # if using ViT backbone, we need to use a different aspect ratio

@@ -12,6 +12,8 @@ pip install pyrender
 
 import os
 import pdb
+import time
+
 import trimesh
 import pyrender
 import numpy as np
@@ -335,6 +337,7 @@ def test_wilor_image_pipeline():
         render_image = render_image[:, :, :3] * (1 - cam_view[:, :, 3:]) + cam_view[:, :, :3] * cam_view[:, :, 3:]
     render_image = (255 * render_image).astype(np.uint8)
     cv2.imwrite(os.path.join(save_dir, os.path.basename(img_path)), render_image)
+    print(os.path.join(save_dir, os.path.basename(img_path)))
 
 
 def test_wilor_video_pipeline():
@@ -375,9 +378,9 @@ def test_wilor_video_pipeline():
 
         # Convert frame to RGB
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
+        t0 = time.time()
         outputs = pipe.predict(image)
-
+        print(time.time() - t0)
         render_image = image.copy()
         render_image = render_image.astype(np.float32)[:, :, ::-1] / 255.0
 
@@ -421,5 +424,5 @@ def test_wilor_video_pipeline():
 
 
 if __name__ == '__main__':
-    test_wilor_image_pipeline()
-    # test_wilor_video_pipeline()
+    # test_wilor_image_pipeline()
+    test_wilor_video_pipeline()
