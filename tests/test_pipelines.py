@@ -426,5 +426,5 @@ def test_wilor_video_pipeline():
 
 
 if __name__ == '__main__':
-    # test_wilor_image_pipeline()
-    test_wilor_video_pipeline()
+    test_wilor_image_pipeline()
+    # test_wilor_video_pipeline()

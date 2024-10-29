@@ -128,7 +128,7 @@ class Attention(nn.Module):
 
         self.qkv = nn.Linear(dim, all_head_dim * 3, bias=qkv_bias)
 
-        self.attn_drop = nn.Dropout(attn_drop)
+        self.attn_drop = attn_drop
         self.proj = nn.Linear(all_head_dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
@@ -139,7 +139,7 @@ class Attention(nn.Module):
         q, k, v = qkv[0], qkv[1], qkv[2]
 
         # 使用 scaled_dot_product_attention
-        attn = F.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=0.0)
+        attn = F.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=self.attn_drop)
 
         x = attn.transpose(1, 2).reshape(B, N, -1)
         x = self.proj(x)
