@@ -6,4 +6,5 @@ einops
 ultralytics==8.1.34
 opencv-python
 huggingface_hub
+scikit-image
 chumpy @ git+https://github.com/mattloper/chumpy

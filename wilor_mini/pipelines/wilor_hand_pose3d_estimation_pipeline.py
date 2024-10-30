@@ -29,8 +29,9 @@ class WiLorHandPose3dEstimationPipeline:
         self.init_models(**kwargs)
 
     def init_models(self, **kwargs):
+        # default tot use CPU
         self.device = kwargs.get("device", torch.device("cpu"))
-        self.dtype = kwargs.get("dtype", torch.float16)
+        self.dtype = kwargs.get("dtype", torch.float32)
         self.FOCAL_LENGTH = 5000
         self.IMAGE_SIZE = 256
         self.WILOR_MINI_REPO_ID = kwargs.get("WILOR_MINI_REPO_ID", "warmshao/WiLoR-mini")
