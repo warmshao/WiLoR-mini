@@ -299,7 +299,7 @@ def test_wilor_image_pipeline():
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     dtype = torch.float16
 
-    pipe = WiLorHandPose3dEstimationPipeline(device=device, dtype=dtype, verbose=False)
+    pipe = WiLorHandPose3dEstimationPipeline(device=device, dtype=dtype, verbose=False, use_vit_trt=True)
     img_path = "assets/img.png"
     image = cv2.imread(img_path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)

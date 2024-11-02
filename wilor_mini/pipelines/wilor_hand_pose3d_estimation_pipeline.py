@@ -16,7 +16,7 @@ import logging
 
 from ..utils.logger import get_logger
 from ..models.wilor import WiLor
-from ..utils import utils
+from ..utils import utils, onnx2trt
 
 
 class WiLorHandPose3dEstimationPipeline:
@@ -49,10 +49,25 @@ class WiLorHandPose3dEstimationPipeline:
             self.logger.info(f"download mano model {mano_model_path} from huggingface")
             hf_hub_download(repo_id=self.WILOR_MINI_REPO_ID, subfolder="pretrained_models", filename="MANO_RIGHT.pkl",
                             local_dir=wilor_pretrained_dir)
+        use_vit_trt = kwargs.get("use_vit_trt", False)
+        if use_vit_trt:
+            self.logger.info("Use Trt model to speed up >>>")
+            vit_trt_path = os.path.join(wilor_pretrained_dir, "pretrained_models", "wilor_vit.trt")
+            if not os.path.exists(vit_trt_path):
+                vit_onnx_path = os.path.join(wilor_pretrained_dir, "pretrained_models", "wilor_vit.onnx")
+                self.logger.info(f"download vit trt model {vit_trt_path} from huggingface")
+                hf_hub_download(repo_id=self.WILOR_MINI_REPO_ID, subfolder="pretrained_models",
+                                filename="wilor_vit.onnx",
+                                local_dir=wilor_pretrained_dir)
+                onnx2trt.convert_onnx_to_trt(vit_onnx_path, vit_trt_path, verbose=self.verbose)
+        else:
+            vit_trt_path = None
         self.logger.info(f"loading WiLor model >>> ")
         self.wilor_model = WiLor(mano_model_path=mano_model_path, mano_mean_path=mano_mean_path,
                                  focal_length=self.FOCAL_LENGTH,
-                                 image_size=self.IMAGE_SIZE)
+                                 image_size=self.IMAGE_SIZE,
+                                 vit_trt_path=vit_trt_path,
+                                 **kwargs)
         wilor_model_path = os.path.join(wilor_pretrained_dir, "pretrained_models", "wilor_final.ckpt")
         if not os.path.exists(wilor_model_path):
             self.logger.info(f"download wilor pretrained model {wilor_model_path} from huggingface")

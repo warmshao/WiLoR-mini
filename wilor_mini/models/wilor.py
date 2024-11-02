@@ -8,6 +8,7 @@ from torch import nn
 from .vit import vit
 from .refinement_net import RefineNet
 from .mano_wrapper import MANO
+from ..trt_models import WilorVitModel
 
 
 class WiLor(nn.Module):
@@ -18,7 +19,15 @@ class WiLor(nn.Module):
     def __init__(self, **kwargs):
         super(WiLor, self).__init__()
         # Create VIT backbone
-        self.backbone = vit(**kwargs)
+        use_vit_trt = kwargs.get("use_vit_trt", False)
+        if use_vit_trt:
+            vit_kwargs = dict(
+                predict_type="trt",
+                model_path=kwargs.get("vit_trt_path", ""),
+            )
+            self.backbone = WilorVitModel(**vit_kwargs)
+        else:
+            self.backbone = vit(**kwargs)
         # Create RefineNet head
         self.refine_net = RefineNet(feat_dim=1280, upscale=3)
         mano_model_path = kwargs.get("mano_model_path", "")

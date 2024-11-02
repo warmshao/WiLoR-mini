@@ -128,6 +128,7 @@ class Attention(nn.Module):
 
         self.qkv = nn.Linear(dim, all_head_dim * 3, bias=qkv_bias)
 
+        # self.attn_drop = nn.Dropout(attn_drop)
         self.attn_drop = attn_drop
         self.proj = nn.Linear(all_head_dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
@@ -137,6 +138,12 @@ class Attention(nn.Module):
         qkv = self.qkv(x)
         qkv = qkv.reshape(B, N, 3, self.num_heads, -1).permute(2, 0, 3, 1, 4)
         q, k, v = qkv[0], qkv[1], qkv[2]
+
+        # q = q * self.scale
+        # attn = (q @ k.transpose(-2, -1))
+        # attn = attn.softmax(dim=-1)
+        # attn = self.attn_drop(attn)
+        # attn = attn @ v
 
         # 使用 scaled_dot_product_attention
         attn = F.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=self.attn_drop)
@@ -353,3 +360,36 @@ class ViT(nn.Module):
     def forward(self, x):
         x = self.forward_features(x)
         return x
+
+    def forward_onnx(self, x):
+        B, C, H, W = x.shape
+        x, (Hp, Wp) = self.patch_embed(x)
+
+        if self.pos_embed is not None:
+            # fit for multiple GPU training
+            # since the first element for pos embed (sin-cos manner) is zero, it will cause no difference
+            x = x + self.pos_embed[:, 1:] + self.pos_embed[:, :1]
+        # X [B, 192, 1280]
+        # x cat [ mean_pose, mean_shape, mean_cam] tokens
+        pose_tokens = self.pose_emb(
+            self.init_hand_pose.reshape(1, self.NUM_HAND_JOINTS + 1, self.joint_rep_dim)).repeat(B, 1, 1)
+        shape_tokens = self.shape_emb(self.init_betas).unsqueeze(1).repeat(B, 1, 1)
+        cam_tokens = self.cam_emb(self.init_cam).unsqueeze(1).repeat(B, 1, 1)
+
+        x = torch.cat([pose_tokens, shape_tokens, cam_tokens, x], 1)
+        for blk in self.blocks:
+            x = blk(x)
+
+        x = self.last_norm(x)
+
+        pose_feat = x[:, :(self.NUM_HAND_JOINTS + 1)]
+        shape_feat = x[:, (self.NUM_HAND_JOINTS + 1):1 + (self.NUM_HAND_JOINTS + 1)]
+        cam_feat = x[:, 1 + (self.NUM_HAND_JOINTS + 1):2 + (self.NUM_HAND_JOINTS + 1)]
+
+        # print(pose_feat.shape, shape_feat.shape, cam_feat.shape)
+        pred_hand_pose = self.decpose(pose_feat).reshape(B, -1) + self.init_hand_pose  # B , 96
+        pred_betas = self.decshape(shape_feat).reshape(B, -1) + self.init_betas  # B , 10
+        pred_cam = self.deccam(cam_feat).reshape(B, -1) + self.init_cam  # B , 3
+
+        img_feat = x[:, 2 + (self.NUM_HAND_JOINTS + 1):].reshape(B, Hp, Wp, -1).permute(0, 3, 1, 2)
+        return pred_hand_pose, pred_betas, pred_cam, img_feat
