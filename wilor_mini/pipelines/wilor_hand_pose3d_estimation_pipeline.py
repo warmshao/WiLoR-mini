@@ -131,11 +131,26 @@ class WiLorHandPose3dEstimationPipeline:
             right = is_rights[i]
             multiplier = (2 * right - 1)
             pred_cam[:, 1] = multiplier * pred_cam[:, 1]
+            if right == 0:
+                wilor_output_i["pred_keypoints_3d"][:, :, 0] = -wilor_output_i["pred_keypoints_3d"][:, :, 0]
+                wilor_output_i["pred_vertices"][:, :, 0] = -wilor_output_i["pred_vertices"][:, :, 0]
+                wilor_output_i["global_orient"] = np.concatenate(
+                    (wilor_output_i["global_orient"][:, :, 0:1], -wilor_output_i["global_orient"][:, :, 1:3]),
+                    axis=-1)
+                wilor_output_i["hand_pose"] = np.concatenate(
+                    (wilor_output_i["hand_pose"][:, :, 0:1], -wilor_output_i["hand_pose"][:, :, 1:3]),
+                    axis=-1)
             scaled_focal_length = self.FOCAL_LENGTH / self.IMAGE_SIZE * img_size.max()
             pred_cam_t_full = utils.cam_crop_to_full(pred_cam, box_center[None], bbox_size, img_size[None],
                                                      scaled_focal_length)
             wilor_output_i["pred_cam_t_full"] = pred_cam_t_full
             wilor_output_i["scaled_focal_length"] = scaled_focal_length
+            # 弱透视
+            pred_keypoints_2d = utils.perspective_projection(wilor_output_i["pred_keypoints_3d"],
+                                                             translation=pred_cam_t_full,
+                                                             focal_length=np.array([scaled_focal_length] * 2)[None],
+                                                             camera_center=img_size[None] / 2)
+            wilor_output_i["pred_keypoints_2d"] = pred_keypoints_2d
             detect_rets[i]["wilor_preds"] = wilor_output_i
 
         self.logger.info("finish detection!")
@@ -193,11 +208,26 @@ class WiLorHandPose3dEstimationPipeline:
             right = is_rights[i]
             multiplier = (2 * right - 1)
             pred_cam[:, 1] = multiplier * pred_cam[:, 1]
+            if right == 0:
+                wilor_output_i["pred_keypoints_3d"][:, :, 0] = -wilor_output_i["pred_keypoints_3d"][:, :, 0]
+                wilor_output_i["pred_vertices"][:, :, 0] = -wilor_output_i["pred_vertices"][:, :, 0]
+                wilor_output_i["global_orient"] = np.concatenate(
+                    (wilor_output_i["global_orient"][:, :, 0:1], -wilor_output_i["global_orient"][:, :, 1:3]),
+                    axis=-1)
+                wilor_output_i["hand_pose"] = np.concatenate(
+                    (wilor_output_i["hand_pose"][:, :, 0:1], -wilor_output_i["hand_pose"][:, :, 1:3]),
+                    axis=-1)
             scaled_focal_length = self.FOCAL_LENGTH / self.IMAGE_SIZE * img_size.max()
             pred_cam_t_full = utils.cam_crop_to_full(pred_cam, box_center[None], bbox_size, img_size[None],
                                                      scaled_focal_length)
             wilor_output_i["pred_cam_t_full"] = pred_cam_t_full
             wilor_output_i["scaled_focal_length"] = scaled_focal_length
+            # 弱透视
+            pred_keypoints_2d = utils.perspective_projection(wilor_output_i["pred_keypoints_3d"],
+                                                             translation=pred_cam_t_full,
+                                                             focal_length=np.array([scaled_focal_length] * 2)[None],
+                                                             camera_center=img_size[None] / 2)
+            wilor_output_i["pred_keypoints_2d"] = pred_keypoints_2d
             detect_rets[i]["wilor_preds"] = wilor_output_i
 
         self.logger.info("finish detection!")

@@ -3,6 +3,7 @@ import pdb
 import time
 import numpy as np
 import torch
+import roma
 from torch import nn
 from .vit import vit
 from .refinement_net import RefineNet
@@ -58,5 +59,6 @@ class WiLor(nn.Module):
 
         pred_mano_params['pred_keypoints_3d'] = pred_keypoints_3d.reshape(batch_size, -1, 3)
         pred_mano_params['pred_vertices'] = pred_vertices.reshape(batch_size, -1, 3)
-
+        pred_mano_params['global_orient'] = roma.rotmat_to_rotvec(pred_mano_params['global_orient'])
+        pred_mano_params['hand_pose'] = roma.rotmat_to_rotvec(pred_mano_params['hand_pose'])
         return pred_mano_params

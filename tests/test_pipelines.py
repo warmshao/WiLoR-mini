@@ -313,17 +313,14 @@ def test_wilor_image_pipeline():
 
     render_image = image.copy()
     render_image = render_image.astype(np.float32)[:, :, ::-1] / 255.0
-
+    pred_keypoints_2d_all = []
     for i, out in enumerate(outputs):
         verts = out["wilor_preds"]['pred_vertices'][0]
-        joints = out["wilor_preds"]['pred_keypoints_3d'][0]
         is_right = out['is_right']
-
-        verts[:, 0] = (2 * is_right - 1) * verts[:, 0]
-        joints[:, 0] = (2 * is_right - 1) * joints[:, 0]
         cam_t = out["wilor_preds"]['pred_cam_t_full'][0]
         scaled_focal_length = out["wilor_preds"]['scaled_focal_length']
-
+        pred_keypoints_2d = out["wilor_preds"]["pred_keypoints_2d"]
+        pred_keypoints_2d_all.append(pred_keypoints_2d)
         misc_args = dict(
             mesh_base_color=LIGHT_PURPLE,
             scene_bg_color=(1, 1, 1),
@@ -337,7 +334,14 @@ def test_wilor_image_pipeline():
 
         # Overlay image
         render_image = render_image[:, :, :3] * (1 - cam_view[:, :, 3:]) + cam_view[:, :, :3] * cam_view[:, :, 3:]
+
     render_image = (255 * render_image).astype(np.uint8)
+    for pred_keypoints_2d in pred_keypoints_2d_all:
+        for j in range(pred_keypoints_2d[0].shape[0]):
+            color = (0, 0, 255)
+            radius = 3
+            x, y = pred_keypoints_2d[0][j]
+            cv2.circle(render_image, (int(x), int(y)), radius, color, -1)
     cv2.imwrite(os.path.join(save_dir, os.path.basename(img_path)), render_image)
     print(os.path.join(save_dir, os.path.basename(img_path)))
 
@@ -388,11 +392,7 @@ def test_wilor_video_pipeline():
 
         for i, out in enumerate(outputs):
             verts = out["wilor_preds"]['pred_vertices'][0]
-            joints = out["wilor_preds"]['pred_keypoints_3d'][0]
             is_right = out['is_right']
-
-            verts[:, 0] = (2 * is_right - 1) * verts[:, 0]
-            joints[:, 0] = (2 * is_right - 1) * joints[:, 0]
             cam_t = out["wilor_preds"]['pred_cam_t_full'][0]
             scaled_focal_length = out["wilor_preds"]['scaled_focal_length']
 

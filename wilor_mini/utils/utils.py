@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+from typing import Optional
 
 
 def expand_to_aspect_ratio(input_shape, target_aspect_ratio=None):
@@ -145,3 +146,51 @@ def cam_crop_to_full(cam_bbox, box_center, box_size, img_size, focal_length=5000
     ty = (2 * (cy - h_2) / bs) + cam_bbox[:, 2]
     full_cam = np.stack([tx, ty, tz], axis=-1)
     return full_cam
+
+
+import numpy as np
+
+
+def perspective_projection(points: np.ndarray,
+                           translation: np.ndarray,
+                           focal_length: np.ndarray,
+                           camera_center: Optional[np.ndarray] = None,
+                           rotation: Optional[np.ndarray] = None) -> np.ndarray:
+    """
+    Computes the perspective projection of a set of 3D points using NumPy.
+
+    Args:
+        points (np.ndarray): Array of shape (B, N, 3) containing the input 3D points.
+        translation (np.ndarray): Array of shape (B, 3) containing the 3D camera translation.
+        focal_length (np.ndarray): Array of shape (B, 2) containing the focal length in pixels.
+        camera_center (np.ndarray): Array of shape (B, 2) containing the camera center in pixels.
+        rotation (np.ndarray): Array of shape (B, 3, 3) containing the camera rotation.
+
+    Returns:
+        np.ndarray: Array of shape (B, N, 2) containing the projection of the input points.
+    """
+    batch_size = points.shape[0]
+
+    if rotation is None:
+        rotation = np.eye(3)[np.newaxis, :, :].repeat(batch_size, axis=0)
+    if camera_center is None:
+        camera_center = np.zeros((batch_size, 2))
+
+    # Populate intrinsic camera matrix K.
+    K = np.zeros((batch_size, 3, 3))
+    K[:, 0, 0] = focal_length[:, 0]
+    K[:, 1, 1] = focal_length[:, 1]
+    K[:, 2, 2] = 1.0
+    K[:, :-1, -1] = camera_center
+
+    # Transform points
+    points = np.einsum('bij,bkj->bki', rotation, points)
+    points += translation[:, np.newaxis, :]
+
+    # Apply perspective distortion
+    projected_points = points / points[:, :, -1][:, :, np.newaxis]
+
+    # Apply camera intrinsics
+    projected_points = np.einsum('bij,bkj->bki', K, projected_points)
+
+    return projected_points[:, :, :-1]

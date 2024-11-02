@@ -16,7 +16,7 @@ regular_deps = [req for req in requirements if not req.startswith('git+')]
 
 setup(
     name='wilor_mini',
-    version='1.0',
+    version='1.1',
     description='WiLoR python package',
     packages=find_packages(),
     install_requires=regular_deps,

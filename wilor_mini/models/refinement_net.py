@@ -201,7 +201,7 @@ class RefineNet(nn.Module):
 
         pred_hand_pose = rot6d_to_rotmat(pred_hand_pose).view(B, -1, 3, 3)
 
-        pred_mano_params = {'global_orient': pred_hand_pose[:, [0]],
+        pred_mano_params = {'global_orient': pred_hand_pose[:, :1],
                             'hand_pose': pred_hand_pose[:, 1:],
                             'betas': pred_betas,
                             'pred_cam': pred_cam}
