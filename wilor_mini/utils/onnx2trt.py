@@ -55,7 +55,7 @@ class EngineBuilder:
 
         profile = self.builder.create_optimization_profile()
         # GPT
-        profile.set_shape("imgs", min=[1, 256, 256, 3], opt=[4, 256, 256, 3], max=[8, 256, 256, 3])
+        profile.set_shape("imgs", min=[1, 3, 256, 192], opt=[4, 3, 256, 192], max=[16, 3, 256, 192])
 
         self.config.add_optimization_profile(profile)
 
