@@ -5,6 +5,7 @@
 I have simplified WiLoR, focusing on the inference process. Now it can be installed via pip and used directly, and it will automatically download the model.
 
 ### How to use?
+Note: make sure you are using Python3.10
 * install: `pip install git+https://github.com/warmshao/WiLoR-mini`
 * Usage:
 ```python
