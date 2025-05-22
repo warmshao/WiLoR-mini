@@ -382,7 +382,7 @@ def test_wilor_video_pipeline():
         if not ret:
             break
         
-        outputs = pipe.predict(image)
+        outputs = pipe.predict(frame)
         # Convert frame to RGB
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         t0 = time.time()
