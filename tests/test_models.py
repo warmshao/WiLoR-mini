@@ -21,7 +21,6 @@ def test_wilor_model():
     pipe = WiLorHandPose3dEstimationPipeline(device=device, dtype=dtype, verbose=False)
     img_path = "assets/img.png"
     image = cv2.imread(img_path)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     outputs = pipe.predict(image)
     hand_bboxs = []
     is_rights = []
