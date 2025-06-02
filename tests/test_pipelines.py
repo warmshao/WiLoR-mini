@@ -302,11 +302,11 @@ def test_wilor_image_pipeline():
     pipe = WiLorHandPose3dEstimationPipeline(device=device, dtype=dtype, verbose=False)
     img_path = "assets/img.png"
     image = cv2.imread(img_path)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     for _ in range(20):
         t0 = time.time()
         outputs = pipe.predict(image)
         print(time.time() - t0)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     save_dir = "./results"
     os.makedirs(save_dir, exist_ok=True)
     renderer = Renderer(pipe.wilor_model.mano.faces)
@@ -381,11 +381,11 @@ def test_wilor_video_pipeline():
         ret, frame = cap.read()
         if not ret:
             break
-
+        
+        outputs = pipe.predict(frame)
         # Convert frame to RGB
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         t0 = time.time()
-        outputs = pipe.predict(image)
         print(time.time() - t0)
         render_image = image.copy()
         render_image = render_image.astype(np.float32)[:, :, ::-1] / 255.0
