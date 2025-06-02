@@ -1,4 +1,4 @@
-torch>=2.0
+torch>=2.0,<=2.5
 torchvision>=0.15.1
 smplx==0.1.28
 timm
