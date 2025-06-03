@@ -29,10 +29,14 @@ class WiLorHandPose3dEstimationPipeline:
         self.init_models(**kwargs)
 
     def init_models(self, **kwargs):
-        # default tot use CPU
+        """
+        focal_length: you will need to scale the actual focal length by 256/max_image_side_length for wilor to estimate 
+            camera translation properly.
+        """
+        # default to use CPU
         self.device = kwargs.get("device", torch.device("cpu"))
         self.dtype = kwargs.get("dtype", torch.float32)
-        self.FOCAL_LENGTH = 5000
+        self.FOCAL_LENGTH =  kwargs.get("focal_length", 5000)
         self.IMAGE_SIZE = 256
         self.WILOR_MINI_REPO_ID = kwargs.get("WILOR_MINI_REPO_ID", "warmshao/WiLoR-mini")
         wilor_pretrained_dir = kwargs.get("wilor_pretrained_dir",
