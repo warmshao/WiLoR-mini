@@ -127,7 +127,7 @@ class DeConvNet(nn.Module):
     def forward(self, img_feat):
 
         face_img_feats = []
-        img_feat = self.first_conv(img_feat)
+        img_feat = self.first_conv(img_feat.contiguous())
         face_img_feats.append(img_feat)
         for i, deconv in enumerate(self.deconv):
             scale = 2 ** i
@@ -149,7 +149,7 @@ class DeConvNet_v2(nn.Module):
 
     def forward(self, img_feat):
         face_img_feats = []
-        img_feat = self.first_conv(img_feat)
+        img_feat = self.first_conv(img_feat.contiguous())
         img_feat = self.deconv(img_feat)
 
         return [img_feat]

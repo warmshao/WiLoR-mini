@@ -40,7 +40,8 @@ class WiLor(nn.Module):
         batch_size = x.shape[0]
         # Compute conditioning features using the backbone
         # if using ViT backbone, we need to use a different aspect ratio
-        temp_mano_params, pred_cam, pred_mano_feats, vit_out = self.backbone(x[:, :, :, 32:-32])  # B, 1280, 16, 12
+        backbone_input = x[:, :, :, 32:-32].contiguous()  # B, 3, 256, 192
+        temp_mano_params, pred_cam, pred_mano_feats, vit_out = self.backbone(backbone_input)  # B, 1280, 16, 12
         # Compute camera translation
         focal_length = self.FOCAL_LENGTH * torch.ones(batch_size, 2, device=x.device, dtype=x.dtype)
 
